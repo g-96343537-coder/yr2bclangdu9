@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>三个好朋友 - 在线朗读作业</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root{ 
+        --bg: #fdf2f8; 
+        --card: #ffffff; 
+        --accent: #ff8fa3; 
+        --accent-dark: #e66a85;
+        --accent-soft: #fff0f5;
+        --text-main: #2d3748; 
+        --text-muted: #718096; 
+        --shadow-soft: 0 10px 40px -10px rgba(255, 143, 163, 0.15);
+        --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+    
+    body {
+        margin: 0;
+        font-family: "PingFang SC", "Microsoft YaHei", "Nunito", sans-serif;
+        background-color: var(--bg);
+        background-image: radial-gradient(circle at 10% 20%, rgb(255, 246, 236) 0%, rgb(255, 235, 238) 90%);
+        color: var(--text-main);
+        height: 100vh;
+        overflow-x: hidden;
+    }
+
+    .wrap {
+        min-height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    .card {
+        width: 100%;
+        max-width: 680px; /* 更窄一点，阅读视线更舒服 */
+        background: var(--card);
+        border-radius: 30px;
+        padding: 40px 30px;
+        box-shadow: var(--shadow-soft), var(--shadow-card);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: transform 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* 顶部装饰条 */
+    .card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 8px;
+        background: linear-gradient(90deg, var(--accent), #ffd6a5);
+    }
+
+    .header-area { text-align: center; margin-bottom: 25px; width: 100%; }
+    
+    .avatar {
+        width: 72px; height: 72px;
+        border-radius: 24px;
+        background: linear-gradient(135deg, var(--accent), #ffd6a5);
+        display: inline-flex; align-items: center; justify-content: center;
+        font-weight: 800; color: #fff; font-size: 32px;
+        box-shadow: 0 8px 20px rgba(255, 143, 163, 0.4);
+        margin-bottom: 15px;
+        transform: rotate(-5deg);
+    }
+
+    h1 { margin: 0; font-size: 26px; color: var(--text-main); letter-spacing: -0.5px; }
+    p.subtitle { margin: 8px 0 0; color: var(--text-muted); font-size: 15px; }
+
+    /* 视图切换动画 */
+    .view-section { display: none; width: 100%; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+    .view-section.active { display: block; }
+    @keyframes slideUp { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+
+    /* 表单控件 */
+    .form-group { margin-bottom: 24px; text-align: left; width: 100%; max-width: 320px; margin: 0 auto 24px auto; }
+    label { display: block; margin-bottom: 10px; font-weight: 600; color: var(--text-muted); font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    select { 
+        width: 100%; padding: 14px; 
+        border: 2px solid #f0f0f0; 
+        background: #fcfcfc;
+        border-radius: 16px; 
+        font-size: 16px; 
+        outline: none; 
+        transition: border-color 0.2s;
+        cursor: pointer;
+        color: var(--text-main);
+    }
+    select:focus { border-color: var(--accent); background: #fff; }
+
+    /* 用户信息卡 */
+    .user-card {
+        display: none; 
+        background: #f0fff4; 
+        border: 1px solid #c6f6d5; 
+        padding: 8px 20px 8px 12px; 
+        border-radius: 50px; 
+        align-items: center; 
+        gap: 12px; 
+        margin: 0 auto 25px auto;
+        width: fit-content;
+    }
+    .user-card img { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff; }
+    .user-card span { font-weight: 700; color: #2f855a; font-size: 14px; }
+
+    /* 按钮样式优化 */
+    .btn-large {
+        background: linear-gradient(90deg, var(--accent), #ffb3c1); 
+        color: #fff; 
+        border: none; 
+        padding: 16px 40px;
+        font-size: 18px; font-weight: 700; 
+        border-radius: 50px; 
+        cursor: pointer; 
+        box-shadow: 0 10px 25px rgba(255, 143, 163, 0.35);
+        transition: transform 0.2s, box-shadow 0.2s; 
+        width: 100%; max-width: 320px;
+        display: block; margin: 10px auto 0 auto;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .btn-large:active { transform: scale(0.98); }
+    .btn-large:disabled { opacity: 0.6; cursor: not-allowed; background: #e2e8f0; box-shadow: none; color: #a0aec0; text-shadow: none; }
+
+    /* 阅读区域 */
+    .sentence-box {
+        background: #fff;
+        border-radius: 20px; 
+        padding: 40px 30px;
+        display: flex; align-items: center; justify-content: center;
+        min-height: 240px; 
+        width: 100%; 
+        box-sizing: border-box;
+        margin: 20px 0 30px 0;
+        border: 2px solid var(--accent-soft);
+        box-shadow: inset 0 2px 10px rgba(0,0,0,0.02);
+    }
+    
+    .sentence {
+        font-size: 28px; /* 加大字号 */
+        line-height: 2.0; /* 增加行距，利于跟读 */
+        text-align: left; 
+        letter-spacing: 1.5px; 
+        color: #4a5568; 
+    }
+    
+    /* 字的高亮效果 */
+    .sentence .ch { 
+        border-radius: 4px; 
+        padding: 0 1px;
+        transition: color 0.1s, transform 0.1s;
+        display: inline-block;
+    }
+    
+    .controls { display: flex; gap: 15px; align-items: center; justify-content: center; flex-wrap: wrap; width: 100%; }
+    
+    .ctrl-btn {
+        padding: 12px 24px; 
+        border-radius: 14px; 
+        border: none; 
+        cursor: pointer; 
+        font-weight: 700; 
+        font-size: 15px;
+        transition: all 0.2s;
+        display: flex; align-items: center; gap: 6px;
+    }
+    
+    .btn-primary { 
+        background: var(--accent); color: #fff; 
+        box-shadow: 0 6px 15px rgba(255, 143, 163, 0.3);
+        padding: 14px 32px; font-size: 17px;
+    }
+    .btn-primary:active { transform: translateY(2px); }
+    
+    .btn-ghost { 
+        background: #fff; border: 2px solid #edf2f7; color: var(--text-muted); 
+    }
+    .btn-ghost:hover { border-color: var(--accent2); color: var(--accent-dark); }
+    
+    /* 进度条 */
+    #footerInfo { 
+        margin-top: 20px; font-size: 13px; color: #cbd5e0; font-weight: 600; letter-spacing: 1px;
+    }
+
+    @media (max-width: 600px) {
+        .card { padding: 30px 20px; border-radius: 20px; }
+        .sentence { font-size: 22px; line-height: 1.8; }
+        .controls { gap: 10px; }
+        .btn-large { width: 100%; }
+        .ctrl-btn { padding: 10px 16px; font-size: 14px; }
+        .btn-primary { padding: 12px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    
+    <div id="loginView" class="card view-section active">
+      <div class="header-area">
+        <div class="avatar">🌲</div>
+        <h1>三个好朋友</h1>
+        <p class="subtitle">华文课文朗读作业</p>
+      </div>
+
+      <div class="form-group">
+        <label>请选择班级 (Class)</label>
+        <select id="classSelect">
+          <option value="" disabled selected>点击选择...</option>
+          <option value="1M">1M</option>
+          <option value="1K">1K</option>
+          <option value="1B">1B</option>
+          <option value="1H">1H</option>
+          <option value="1J">1J</option>
+        </select>
+      </div>
+
+      <div id="userInfo" class="user-card">
+        <img id="userImg" src="" alt="">
+        <span id="userNameDisplay"></span>
+      </div>
+
+      <div class="google-btn-wrapper" id="googleBtnContainer" style="min-height: 50px; margin: 10px 0 20px 0;">
+        <div id="g_id_onload"
+             data-client_id="1006856013626-uk3eq5tchv9t65gqosb0k6rst7hi1eeb.apps.googleusercontent.com" 
+             data-callback="handleCredentialResponse"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="center"></div>
+      </div>
+
+      <button id="startAppBtn" class="btn-large" disabled>请先登录</button>
+      
+      <p style="font-size:12px; color:#cbd5e0; margin-top:30px;">© 华文课室 Online</p>
+    </div>
+
+    <div id="readingView" class="card view-section">
+      <div style="display:flex; justify-content: space-between; align-items:center; width:100%; margin-bottom:10px; border-bottom:1px solid #f0f0f0; padding-bottom:15px;">
+        <div style="display:flex; gap:12px; align-items:center;">
+            <div class="avatar" style="width:48px; height:48px; font-size:20px; margin:0; border-radius:12px; box-shadow:none;">📖</div>
+            <div style="text-align:left;">
+            <h1 style="font-size:18px;">正在朗读</h1>
+            <p class="subtitle" id="studentInfoDisplay" style="font-size:13px; margin-top:2px;">...</p>
+            </div>
+        </div>
+        <div style="font-size:12px; font-weight:bold; color:var(--accent);" id="progressDisplay">1 / 6</div>
+      </div>
+
+      <div class="sentence-box"><div class="sentence" id="sentenceText">加载中...</div></div>
+      
+      <div class="controls">
+        <button id="prevBtn" class="ctrl-btn btn-ghost">⬅ 上一句</button>
+        <button id="playBtn" class="ctrl-btn btn-primary">🔊 播放</button>
+        <button id="nextBtn" class="ctrl-btn btn-ghost">下一句 ➡</button>
+      </div>
+      
+      <div class="controls" style="margin-top:20px; border-top: 1px dashed #edf2f7; padding-top: 20px; width: 100%;">
+          <button id="autoBtn" class="ctrl-btn btn-ghost" style="font-size:13px; color: #a0aec0; border-color: transparent;">🔁 自动播放：关</button>
+      </div>
+    </div>
+
+    <div id="successView" class="card view-section" style="text-align:center;">
+      <div style="font-size:80px; margin-bottom:10px; animation: bounce 1s infinite;">🎉</div>
+      <h1 style="margin-bottom:10px; color: var(--accent-dark);">太棒了！</h1>
+      <p style="color:var(--text-muted); margin-bottom:30px; line-height:1.6;">你已经完成了《三个好朋友》的<br>朗读功课。</p>
+      <div style="background:#f0fff4; color:#276749; padding:15px 25px; border-radius:16px; margin-bottom:30px; font-size:15px; display:inline-block; font-weight:bold;">
+        ✅ 成绩已提交给老师
+      </div>
+      <br>
+      <button onclick="location.reload()" class="btn-large">再读一次</button>
+    </div>
+  </div>
+
+  <style>
+      @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  </style>
+
+  <script>
+    // Web App URL (GAS)
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbxLzN0LV8frFeNjXwMdr7DSF9wJGzSg8iLjJuQ6vnqf3-ERNxgc6fa0ZN6vn7nmsovGDQ/exec";
+    
+    // 课文内容：三个好朋友
+    const sentences = [
+      "小野兔、小袋鼠和小象一起上山栽树。",
+      "没有锄头挖洞怎么办？小野兔说：“不要紧，不要紧，我有尖利的脚爪。”不一会儿，小野兔就用脚爪挖出了一个洞。",
+      "没有袋子运肥料怎么办？小袋鼠说：“不要紧，不要紧，我有一个皮口袋。”不一会儿，小袋鼠就用皮口袋运来了一些肥料。",
+      "三个好朋友把小树栽进洞里，堆上泥土，放上肥料。",
+      "没有水桶浇水怎么办？小象说：“不要紧，不要紧，我有长长的鼻子。”小象跑到小河边，用长鼻子吸足了水，把泥土浇得湿湿的。",
+      "小树栽好啦！三个好朋友手拉着手，围着小树又跳又笑。"
+    ];
+    
+    let currentClass = "";
+    let googleUser = null; 
+    let index = 0;
+    let auto = false;
+    let autoTimer = null;
+
+    // Google 登录回调
+    function handleCredentialResponse(response) {
+      const responsePayload = decodeJwtResponse(response.credential);
+      console.log("ID: " + responsePayload.sub);
+      
+      googleUser = {
+        name: responsePayload.name,
+        email: responsePayload.email,
+        picture: responsePayload.picture
+      };
+
+      document.getElementById('googleBtnContainer').style.display = 'none';
+      const userCard = document.getElementById('userInfo');
+      userCard.style.display = 'flex';
+      document.getElementById('userImg').src = googleUser.picture;
+      document.getElementById('userNameDisplay').textContent = googleUser.name;
+
+      checkStartEnable();
+    }
+
+    // JWT 解码
+    function decodeJwtResponse(token) {
+      var base64Url = token.split('.')[1];
+      var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    }
+
+    function checkStartEnable() {
+      const btn = document.getElementById('startAppBtn');
+      if(document.getElementById('classSelect').value && googleUser) {
+        btn.disabled = false;
+        btn.textContent = "开始做功课 🚀";
+      }
+    }
+
+    document.getElementById('classSelect').addEventListener('change', (e) => {
+      currentClass = e.target.value;
+      checkStartEnable();
+    });
+
+    document.getElementById('startAppBtn').addEventListener('click', () => {
+      document.getElementById('loginView').classList.remove('active');
+      document.getElementById('loginView').style.display = 'none';
+      const rv = document.getElementById('readingView');
+      rv.style.display = 'flex'; rv.classList.add('active');
+      
+      document.getElementById('studentInfoDisplay').textContent = 
+        `${currentClass} 班 · ${googleUser.name}`;
+      loadSentence(0);
+    });
+
+    // 朗读逻辑
+    const sentenceText = document.getElementById('sentenceText');
+    const progressDisplay = document.getElementById('progressDisplay');
+
+    function loadSentence(i) {
+      if(i >= sentences.length) { finishHomework(); return; }
+      if(i < 0) return; 
+      index = i;
+      
+      // 生成带span的HTML
+      sentenceText.innerHTML = sentences[index].split('').map((ch,idx)=>`<span class="ch" data-i="${idx}">${ch}</span>`).join('');
+      
+      // 更新顶部进度
+      progressDisplay.textContent = `${index+1} / ${sentences.length}`;
+    }
+
+    function playCurrent() {
+      window.speechSynthesis.cancel();
+      document.querySelectorAll('.ch').forEach(el=>el.style.color='');
+      
+      const msg = new SpeechSynthesisUtterance(sentences[index]);
+      msg.lang = 'zh-CN'; 
+      msg.rate = 0.9; 
+      
+      msg.onboundary = (e) => { 
+        if(e.name==='word'||typeof e.charIndex==='number') highlight(e.charIndex); 
+      };
+      
+      msg.onend = () => { 
+        if(auto) autoTimer = setTimeout(()=>loadSentence(index+1)||playCurrent(), 2000); 
+      };
+      
+      window.speechSynthesis.speak(msg);
+    }
+    
+    function highlight(i) {
+      document.querySelectorAll('.ch').forEach(el=>{
+          el.style.color='';
+          el.style.transform='scale(1)';
+          el.style.fontWeight='normal';
+      });
+      
+      const span = document.querySelector(`.ch[data-i="${i}"]`);
+      if(span) {
+          span.style.color='#ff4fa3'; // 高亮色
+          span.style.transform='scale(1.2)'; // 微微放大
+          span.style.fontWeight='bold';
+      }
+    }
+
+    // 提交数据
+    function finishHomework() {
+      auto = false; clearTimeout(autoTimer); window.speechSynthesis.cancel();
+      
+      const formData = new URLSearchParams();
+      formData.append('name', googleUser.name);
+      formData.append('email', googleUser.email);
+      formData.append('class', currentClass);
+      formData.append('score', "完成");
+      formData.append('total', sentences.length);
+
+      fetch(GAS_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: formData
+      });
+
+      document.getElementById('readingView').style.display='none';
+      const sv = document.getElementById('successView');
+      sv.style.display='block'; sv.classList.add('active');
+    }
+
+    document.getElementById('playBtn').onclick = playCurrent;
+    document.getElementById('nextBtn').onclick = ()=>{ window.speechSynthesis.cancel(); loadSentence(index+1); };
+    document.getElementById('prevBtn').onclick = ()=>{ window.speechSynthesis.cancel(); loadSentence(index-1); };
+    document.getElementById('autoBtn').onclick = function() {
+      auto = !auto; this.textContent = auto?"🔁 自动播放：开":"🔁 自动播放：关";
+      this.style.color = auto ? "#ff8fa3" : "#a0aec0";
+      if(auto) playCurrent(); else window.speechSynthesis.cancel();
+    };
+  </script>
+</body>
+</html>
